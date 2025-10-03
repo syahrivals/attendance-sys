@@ -9,13 +9,13 @@ class EmployeeController extends Controller
 {
     public function index()
     {
-        $employees = Employee::all();
-        return view('employees.index', compact('employees'));
+        $employees = Employee::paginate(15);
+        return view('admin.employees.index', compact('employees'));
     }
 
     public function create()
     {
-        return view('employees.create');
+        return view('admin.employees.form');
     }
 
     public function store(Request $request)
@@ -28,17 +28,17 @@ class EmployeeController extends Controller
 
         Employee::create($request->all());
 
-        return redirect()->route('employees.index')->with('success', 'Karyawan berhasil ditambahkan.');
+        return redirect()->route('admin.employees.index')->with('success', 'Karyawan berhasil ditambahkan.');
     }
 
     public function show(Employee $employee)
     {
-        return view('employees.show', compact('employee'));
+        return view('admin.employees.show', compact('employee'));
     }
 
     public function edit(Employee $employee)
     {
-        return view('employees.edit', compact('employee'));
+        return view('admin.employees.form', compact('employee'));
     }
 
     public function update(Request $request, Employee $employee)
@@ -51,12 +51,12 @@ class EmployeeController extends Controller
 
         $employee->update($request->all());
 
-        return redirect()->route('employees.index')->with('success', 'Data karyawan berhasil diperbarui.');
+        return redirect()->route('admin.employees.index')->with('success', 'Data karyawan berhasil diperbarui.');
     }
 
     public function destroy(Employee $employee)
     {
         $employee->delete();
-        return redirect()->route('employees.index')->with('success', 'Karyawan berhasil dihapus.');
+        return redirect()->route('admin.employees.index')->with('success', 'Karyawan berhasil dihapus.');
     }
 }

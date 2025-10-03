@@ -10,7 +10,7 @@ class AdminMiddleware
 {
     public function handle(Request $request, Closure $next)
     {
-        $isAdmin = $request->session()->boolean('is_admin');
+        $isAdmin = (bool) $request->session()->get('is_admin', false);
 
         if (!Auth::check() || !$isAdmin) {
             if (Auth::check()) {

@@ -61,4 +61,25 @@ class Attendance extends Model
             'description' => null
         ];
     }
+
+    // Accessors to match admin views naming
+    public function getTanggalAttribute()
+    {
+        return $this->date ? Carbon::parse($this->date) : null;
+    }
+
+    public function getJamCheckinAttribute()
+    {
+        return $this->check_in_time;
+    }
+
+    public function getJamCheckoutAttribute()
+    {
+        return $this->check_out_time;
+    }
+
+    public function getTerlambatMenitAttribute()
+    {
+        return $this->late_minutes;
+    }
 }

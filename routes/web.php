@@ -27,7 +27,19 @@ Route::middleware('auth')->group(function () {
 // Dashboard + Employees (admin)
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
-    Route::resource('employees', EmployeeController::class);
+    Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/attendances', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.index');
+    Route::get('/attendances/today', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.today');
+    Route::get('/export', function () { return view('admin.export.index'); })->name('admin.export.index');
+    Route::post('/export/attendance', function () { return back()->with('success', 'Export absensi diproses'); })->name('admin.export.attendance');
+    Route::post('/export/employees', function () { return back()->with('success', 'Export karyawan diproses'); })->name('admin.export.employees');
+    Route::get('/export/template/{type}', function ($type) { return back()->with('success', "Template $type diproses"); })->name('admin.export.template');
+    Route::post('/export/clear-history', function () { return response()->json(['success' => true]); })->name('admin.export.clear');
+    Route::delete('/export/{id}', function ($id) { return response()->json(['success' => true]); })->name('admin.export.delete');
+    Route::get('/settings', function () { return view('admin.settings'); })->name('admin.settings');
+    Route::get('/reports', function () { return view('admin.export.index'); })->name('admin.reports.index');
+    Route::get('/profile', function () { return view('profile.edit'); })->name('admin.profile');
+    Route::resource('employees', EmployeeController::class)->names('admin.employees');
 });
 
 // Lupa password

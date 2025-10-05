@@ -28,6 +28,7 @@ Route::middleware('auth')->group(function () {
 Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/dashboard', [DashboardController::class, 'index'])->name('dashboard');
     Route::get('/admin/dashboard', [DashboardController::class, 'index'])->name('admin.dashboard');
+    Route::get('/admin/dashboard/activities', [DashboardController::class, 'activities'])->name('admin.dashboard.activities');
     Route::get('/attendances', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.index');
     Route::get('/attendances/today', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.today');
     Route::get('/export', function () { return view('admin.export.index'); })->name('admin.export.index');

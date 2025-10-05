@@ -75,4 +75,19 @@ class DashboardController extends Controller
             'recentActivities'
         ));
     }
+
+    public function activities()
+    {
+        $recentActivities = Attendance::with('employee')
+            ->orderByDesc('created_at')
+            ->limit(10)
+            ->get();
+
+        return view('admin.dashboard._recent-activities', compact('recentActivities'));
+    }
 }
+
+
+
+
+

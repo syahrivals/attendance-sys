@@ -178,36 +178,7 @@
         </div>
         <div class="p-6">
             <div class="space-y-4" id="recent-activities">
-                @forelse($recentActivities ?? [] as $activity)
-                <div class="flex items-center space-x-4">
-                    <div class="w-10 h-10 bg-gray-100 rounded-full flex items-center justify-center">
-                       @if(isset($activity) && is_object($activity) && $activity->status == 'hadir')
-                            <i class="fas fa-sign-in-alt text-green-600"></i>
-                        @elseif(isset($activity) && is_object($activity) && $activity->status == 'terlambat')
-                            <i class="fas fa-clock text-yellow-600"></i>
-                        @else
-                            <i class="fas fa-sign-out-alt text-blue-600"></i>
-                        @endif
-                    </div>
-                    <div class="flex-1">
-                        <p class="text-sm font-medium text-gray-900">
-                            {{ isset($activity->employee) ? $activity->employee->nama : 'Unknown Employee' }}
-                        </p>
-                        <p class="text-sm text-gray-500">
-                            {{ ($activity && $activity->status == 'hadir') ? 'Check-in' : 'Check-out' }}
-                            {{ isset($activity) ? ($activity->jam_checkin ?? $activity->jam_checkout ?? '-') : '-' }}
-                        </p>
-                    </div>
-                    <div class="text-sm text-gray-400">
-                        {{ $activity->created_at ? $activity->created_at->diffForHumans() : 'Just now' }}
-                    </div>
-                </div>
-                @empty
-                <div class="text-center py-8">
-                    <i class="fas fa-calendar-alt text-gray-300 text-4xl mb-4"></i>
-                    <p class="text-gray-500">Belum ada aktivitas hari ini</p>
-                </div>
-                @endforelse
+                @include('admin.dashboard._recent-activities', ['recentActivities' => $recentActivities ?? collect()])
             </div>
         </div>
     </div>
@@ -330,7 +301,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Auto-refresh recent activities every 30 seconds
     setInterval(function() {
-        fetch('/admin/dashboard/activities')
+        fetch('{{ route('admin.dashboard.activities') }}')
             .then(response => response.text())
             .then(html => {
                 document.getElementById('recent-activities').innerHTML = html;
@@ -340,3 +311,4 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endsection
+

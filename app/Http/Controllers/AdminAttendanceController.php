@@ -26,9 +26,9 @@ class AdminAttendanceController extends Controller
         if ($request->filled('status')) {
             $query->where('status', $request->input('status'));
         }
-        if ($request->filled('jabatan')) {
+        if ($request->filled('department')) {
             $query->whereHas('employee', function ($q) use ($request) {
-                $q->where('jabatan', $request->input('jabatan'));
+                $q->where('department', $request->input('department'));
             });
         }
 
@@ -42,8 +42,8 @@ class AdminAttendanceController extends Controller
         $todayAbsent = Attendance::whereDate('date', $today)->where('status', 'Tidak Hadir')->count();
         $attendanceRate = $todayTotal > 0 ? round(($todayPresent / max($todayTotal, 1)) * 100) : 0;
 
-        $employees = Employee::orderBy('nama')->get();
-        $departments = Employee::query()->whereNotNull('jabatan')->distinct()->pluck('jabatan')->filter()->values()->all();
+        $employees = Employee::orderBy('name')->get();
+        $departments = Employee::query()->whereNotNull('department')->distinct()->pluck('department')->filter()->values()->all();
 
         return view('admin.attendance.index', compact(
             'attendances',

@@ -31,6 +31,9 @@ Route::middleware(['auth', 'admin'])->group(function () {
     Route::get('/admin/dashboard/activities', [DashboardController::class, 'activities'])->name('admin.dashboard.activities');
     Route::get('/attendances', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.index');
     Route::get('/attendances/today', [\App\Http\Controllers\AdminAttendanceController::class, 'index'])->name('admin.attendances.today');
+    Route::get('/admin/attendances/export', [\App\Http\Controllers\AdminAttendanceController::class, 'exportPreview'])->name('admin.attendances.export');
+    Route::get('/admin/attendances/export/download', [\App\Http\Controllers\AdminAttendanceController::class, 'exportDownload'])->name('admin.attendances.export.download');
+    Route::post('/admin/attendances/bulk-delete', [\App\Http\Controllers\AdminAttendanceController::class, 'bulkDelete'])->name('admin.attendances.bulk-delete');
     Route::get('/export', function () { return view('admin.export.index'); })->name('admin.export.index');
     Route::post('/export/attendance', function () { return back()->with('success', 'Export absensi diproses'); })->name('admin.export.attendance');
     Route::post('/export/employees', function () { return back()->with('success', 'Export karyawan diproses'); })->name('admin.export.employees');
@@ -49,3 +52,4 @@ Route::get('/forgot-password', [PasswordResetLinkController::class, 'create'])
 
 Route::post('/forgot-password', [PasswordResetLinkController::class, 'store'])
     ->name('password.email');
+

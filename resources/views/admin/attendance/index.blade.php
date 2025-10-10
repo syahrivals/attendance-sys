@@ -32,11 +32,11 @@
                 <i class="fas fa-plus mr-2"></i>
                 Tambah Absensi
             </button>
-            <a href="{{ route('admin.export.attendance') }}" 
-               class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors">
+            <button type="button" onclick="bulkAction('export')"
+                    class="inline-flex items-center px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md transition-colors"
                 <i class="fas fa-download mr-2"></i>
                 Export
-            </a>
+            </button>
         </div>
     </div>
 
@@ -453,33 +453,90 @@
     </div>
 </div>
 
+<!-- Export Selected Modal -->
+<div id="exportModal" class="fixed inset-0 bg-gray-600 bg-opacity-50 overflow-y-auto h-full w-full hidden z-50">
+    <div class="relative top-10 mx-auto p-5 border w-11/12 md:w-3/4 lg:w-1/2 shadow-lg rounded-md bg-white">
+        <div class="mt-3">
+            <div class="flex items-center justify-between mb-4">
+                <h3 class="text-lg font-medium text-gray-900">Export Absensi</h3>
+                <button type="button" onclick="closeExportModal()" class="text-gray-400 hover:text-gray-600">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="space-y-4">
+                <div class="bg-gray-50 border border-gray-200 rounded-md p-4">
+                    <p class="text-sm text-gray-600">Total data terpilih: <span id="exportSelectedCount" class="font-semibold text-gray-900">0</span></p>
+                    <p class="text-xs text-gray-500 mt-1">Pastikan data yang dipilih sudah sesuai sebelum diekspor.</p>
+                </div>
+                <div id="exportPreviewLoading" class="flex items-center space-x-2 text-sm text-gray-500">
+                    <i class="fas fa-spinner fa-spin"></i>
+                    <span>Mengambil pratinjau data...</span>
+                </div>
+                <div id="exportPreviewError" class="hidden text-sm text-red-600 bg-red-50 border border-red-200 rounded-md p-3"></div>
+                <div id="exportPreviewList" class="max-h-60 overflow-y-auto border border-gray-200 rounded-md divide-y divide-gray-100 bg-white"></div>
+            </div>
+            <div class="flex items-center justify-end space-x-3 pt-6">
+                <button type="button" onclick="closeExportModal()" class="px-4 py-2 border border-gray-300 text-gray-700 text-sm font-medium rounded-md hover:bg-gray-50">
+                    Batal
+                </button>
+                <button id="exportDownloadButton" type="button" class="px-4 py-2 bg-green-600 hover:bg-green-700 text-white text-sm font-medium rounded-md disabled:opacity-50 disabled:cursor-not-allowed">
+                    <i class="fas fa-file-download mr-2"></i>
+                    Download CSV
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<form id="exportDownloadForm" action="{{ route('admin.attendances.export.download') }}" method="GET" class="hidden">
+    <input type="hidden" name="ids" id="exportIdsInput">
+</form>
+
 @endsection
 
 @push('scripts')
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Select All functionality
+
+document.addEventListener('DOMContentLoaded', () => {
     const selectAllCheckbox = document.getElementById('selectAll');
     const attendanceCheckboxes = document.querySelectorAll('.attendance-checkbox');
-    
-    selectAllCheckbox?.addEventListener('change', function() {
+    const exportModal = document.getElementById('exportModal');
+    const exportSelectedCount = document.getElementById('exportSelectedCount');
+    const exportPreviewList = document.getElementById('exportPreviewList');
+    const exportPreviewError = document.getElementById('exportPreviewError');
+    const exportPreviewLoading = document.getElementById('exportPreviewLoading');
+    const exportDownloadButton = document.getElementById('exportDownloadButton');
+    const exportDownloadForm = document.getElementById('exportDownloadForm');
+    const exportIdsInput = document.getElementById('exportIdsInput');
+    const exportPreviewUrl = @json(route('admin.attendances.export'));
+    const bulkDeleteUrl = @json(route('admin.attendances.bulk-delete'));
+
+    selectAllCheckbox?.addEventListener('change', (event) => {
         attendanceCheckboxes.forEach(checkbox => {
-            checkbox.checked = this.checked;
+            checkbox.checked = event.target.checked;
         });
+        if (selectAllCheckbox) {
+            selectAllCheckbox.indeterminate = false;
+        }
     });
 
-    // Update select all when individual checkboxes change
     attendanceCheckboxes.forEach(checkbox => {
-        checkbox.addEventListener('change', function() {
-            const checkedBoxes = document.querySelectorAll('.attendance-checkbox:checked');
-            if (selectAllCheckbox) {
-                selectAllCheckbox.checked = checkedBoxes.length === attendanceCheckboxes.length;
-                selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < attendanceCheckboxes.length;
+        checkbox.addEventListener('change', () => {
+            if (!selectAllCheckbox) {
+                return;
             }
+            const checkedBoxes = document.querySelectorAll('.attendance-checkbox:checked');
+            selectAllCheckbox.checked = checkedBoxes.length === attendanceCheckboxes.length && attendanceCheckboxes.length > 0;
+            selectAllCheckbox.indeterminate = checkedBoxes.length > 0 && checkedBoxes.length < attendanceCheckboxes.length;
         });
     });
 
-    // Modal functions
+    document.getElementById('clearFilters')?.addEventListener('click', () => {
+        const filterForm = document.querySelector('form[method="GET"]');
+        filterForm?.reset();
+        window.location.href = window.location.pathname;
+    });
+
     window.showAddAttendanceModal = function() {
         document.getElementById('modalTitle').textContent = 'Tambah Absensi';
         document.getElementById('attendanceForm').reset();
@@ -489,7 +546,6 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     window.editAttendance = function(id) {
-        // Fetch attendance data and populate form
         fetch(`/admin/attendances/${id}`)
             .then(response => response.json())
             .then(data => {
@@ -528,54 +584,147 @@ document.addEventListener('DOMContentLoaded', function() {
         document.getElementById('attendanceModal').classList.add('hidden');
     };
 
-    // Form submission
-    document.getElementById('attendanceForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
+    document.getElementById('attendanceForm')?.addEventListener('submit', function(event) {
+        event.preventDefault();
+
         const formData = new FormData(this);
         const id = document.getElementById('attendanceId').value;
         const url = id ? `/admin/attendances/${id}` : '/admin/attendances';
-        const method = id ? 'PUT' : 'POST';
-        
+
         if (id) {
             formData.append('_method', 'PUT');
         }
         formData.append('_token', '{{ csrf_token() }}');
-        
+
         fetch(url, {
             method: 'POST',
             body: formData
         })
-        .then(response => response.json())
-        .then(data => {
-            if (data.success) {
-                location.reload();
-            } else {
-                alert(data.message || 'Terjadi kesalahan');
-            }
-        })
-        .catch(error => {
-            console.error('Error:', error);
-            alert('Terjadi kesalahan sistem');
-        });
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    location.reload();
+                } else {
+                    alert(data.message || 'Terjadi kesalahan');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Terjadi kesalahan sistem');
+            });
     });
 
-    // Bulk actions
+    const openExportModal = (ids) => {
+        if (!exportModal) {
+            window.location.href = `${exportPreviewUrl}?ids=${ids.join(',')}`;
+            return;
+        }
+
+        const queryIds = ids.map(encodeURIComponent).join(',');
+        exportIdsInput.value = ids.join(',');
+        exportSelectedCount.textContent = ids.length;
+        exportPreviewList.innerHTML = '';
+        exportPreviewError.classList.add('hidden');
+        exportPreviewLoading.classList.remove('hidden');
+        exportDownloadButton.disabled = true;
+        exportModal.classList.remove('hidden');
+
+        fetch(`${exportPreviewUrl}?ids=${queryIds}`, {
+            headers: {
+                'Accept': 'application/json'
+            }
+        })
+            .then(async response => {
+                if (!response.ok) {
+                    let message = 'Gagal mengambil data absensi terpilih.';
+                    try {
+                        const data = await response.json();
+                        if (data && data.message) {
+                            message = data.message;
+                        }
+                    } catch (error) {
+                        // abaikan kesalahan parsing JSON
+                    }
+                    throw new Error(message);
+                }
+
+                return response.json();
+            })
+            .then(data => {
+                exportPreviewLoading.classList.add('hidden');
+
+                if (!data.attendances || data.attendances.length === 0) {
+                    exportPreviewError.textContent = 'Data absensi tidak ditemukan.';
+                    exportPreviewError.classList.remove('hidden');
+                    return;
+                }
+
+                data.attendances.forEach(attendance => {
+                    const employee = attendance.employee || {};
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'px-4 py-3';
+                    const employeeName = employee.name || 'Tanpa Nama';
+                    const employeeNumber = employee.employee_id || '-';
+                    const statusText = attendance.status || '-';
+                    const checkInText = attendance.check_in_time ? ` | Masuk: ${attendance.check_in_time}` : '';
+                    const checkOutText = attendance.check_out_time ? ` | Pulang: ${attendance.check_out_time}` : '';
+                    const lateText = attendance.late_minutes ? `<p class="text-xs text-amber-600 mt-1">Terlambat ${attendance.late_minutes} menit</p>` : '';
+
+                    wrapper.innerHTML = `
+                        <p class="text-sm font-semibold text-gray-900">
+                            ${employeeName}
+                            <span class="text-gray-500 text-xs">(${employeeNumber})</span>
+                        </p>
+                        <p class="text-xs text-gray-600 mt-1">
+                            ${(attendance.date || '-')} | Status: ${statusText}${checkInText}${checkOutText}
+                        </p>
+                        ${lateText}
+                    `;
+                    exportPreviewList.appendChild(wrapper);
+                });
+
+                exportDownloadButton.disabled = false;
+            })
+            .catch(error => {
+                exportPreviewLoading.classList.add('hidden');
+                exportPreviewError.textContent = error.message || 'Gagal memuat pratinjau data.';
+                exportPreviewError.classList.remove('hidden');
+            });
+    };
+
+    window.closeExportModal = function() {
+        if (!exportModal) {
+            return;
+        }
+        exportModal.classList.add('hidden');
+        exportPreviewError.classList.add('hidden');
+        exportPreviewLoading.classList.add('hidden');
+        exportPreviewList.innerHTML = '';
+        exportDownloadButton.disabled = true;
+    };
+
+    exportDownloadButton?.addEventListener('click', () => {
+        if (exportDownloadButton.disabled) {
+            return;
+        }
+        exportDownloadForm.submit();
+        window.closeExportModal();
+    });
+
     window.bulkAction = function(action) {
         const checkedBoxes = document.querySelectorAll('.attendance-checkbox:checked');
         if (checkedBoxes.length === 0) {
             alert('Pilih minimal satu data absensi');
             return;
         }
-        
+
         const ids = Array.from(checkedBoxes).map(cb => cb.value);
-        
+
         if (action === 'delete') {
             if (confirm(`Apakah Anda yakin ingin menghapus ${ids.length} data absensi?`)) {
-                // Handle bulk delete
                 const form = document.createElement('form');
                 form.method = 'POST';
-                form.action = '/admin/attendances/bulk-delete';
+                form.action = bulkDeleteUrl;
                 form.innerHTML = `
                     <input type="hidden" name="_token" value="{{ csrf_token() }}">
                     <input type="hidden" name="ids" value="${ids.join(',')}">
@@ -584,18 +733,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 form.submit();
             }
         } else if (action === 'export') {
-            // Handle bulk export
-            window.location.href = `/admin/attendances/export?ids=${ids.join(',')}`;
+            openExportModal(ids);
         }
     };
 
-    // Auto-calculate late minutes based on check-in time
     document.getElementById('modalCheckin')?.addEventListener('change', function() {
         const checkinTime = this.value;
         if (checkinTime) {
             const checkin = new Date(`2000-01-01 ${checkinTime}`);
-            const workStart = new Date(`2000-01-01 07:00`);
-            
+            const workStart = new Date('2000-01-01T07:00:00');
+
             if (checkin > workStart) {
                 const lateMinutes = Math.floor((checkin - workStart) / (1000 * 60));
                 document.getElementById('modalTerlambat').value = lateMinutes;
@@ -609,3 +756,8 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 @endpush
+
+
+
+
+

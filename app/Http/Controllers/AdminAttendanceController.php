@@ -56,6 +56,158 @@ class AdminAttendanceController extends Controller
             'attendanceRate'
         ));
     }
-}
 
+    protected function parseIds($ids): array
+    {
+        if (is_string($ids)) {
+            $ids = preg_split('/[,\\s]+/', $ids, -1, PREG_SPLIT_NO_EMPTY);
+        }
+
+        if ($ids instanceof \Illuminate\Support\Collection) {
+            $ids = $ids->all();
+        }
+
+        if (! is_array($ids)) {
+            $ids = [$ids];
+        }
+
+        return collect($ids)
+            ->filter(fn ($id) => is_numeric($id))
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    public function exportPreview(Request $request)
+    {
+        $ids = $this->parseIds($request->input('ids', []));
+
+        if (empty($ids)) {
+            return response()->json([
+                'message' => 'Tidak ada data absensi yang dipilih.',
+            ], 422);
+        }
+
+        $attendances = Attendance::with('employee')
+            ->whereIn('id', $ids)
+            ->orderByDesc('date')
+            ->orderBy('employee_id')
+            ->get();
+
+        if ($attendances->isEmpty()) {
+            return response()->json([
+                'message' => 'Data absensi tidak ditemukan.',
+            ], 404);
+        }
+
+        $data = $attendances->map(function (Attendance $attendance) {
+            $employee = $attendance->employee;
+
+            return [
+                'id' => $attendance->id,
+                'employee' => [
+                    'id' => $employee?->id,
+                    'name' => $employee?->name,
+                    'employee_id' => $employee?->employee_id,
+                    'department' => $employee?->department,
+                    'position' => $employee?->position,
+                ],
+                'date' => optional($attendance->date)->format('Y-m-d'),
+                'check_in_time' => $attendance->check_in_time,
+                'check_out_time' => $attendance->check_out_time,
+                'status' => $attendance->status,
+                'late_minutes' => $attendance->late_minutes,
+                'notes' => $attendance->notes,
+            ];
+        });
+
+        return response()->json([
+            'count' => $data->count(),
+            'attendances' => $data,
+        ]);
+    }
+
+    public function exportDownload(Request $request)
+    {
+        $ids = $this->parseIds($request->input('ids', []));
+
+        if (empty($ids)) {
+            return back()->with('error', 'Pilih minimal satu data absensi untuk diekspor.');
+        }
+
+        $attendances = Attendance::with('employee')
+            ->whereIn('id', $ids)
+            ->orderByDesc('date')
+            ->orderBy('employee_id')
+            ->get();
+
+        if ($attendances->isEmpty()) {
+            return back()->with('error', 'Data absensi tidak ditemukan.');
+        }
+
+        $filename = 'attendance-export-' . now()->format('Ymd_His') . '.csv';
+
+        $headers = [
+            'Content-Type' => 'text/csv',
+            'Content-Disposition' => 'attachment; filename="' . $filename . '"',
+        ];
+
+        $columns = ['ID', 'Tanggal', 'NIP', 'Nama', 'Departemen', 'Posisi', 'Check In', 'Check Out', 'Status', 'Terlambat (menit)', 'Catatan'];
+
+        $callback = function () use ($attendances, $columns) {
+            $handle = fopen('php://output', 'w');
+
+            fputcsv($handle, $columns);
+
+            foreach ($attendances as $attendance) {
+                $employee = $attendance->employee;
+
+                fputcsv($handle, [
+                    $attendance->id,
+                    optional($attendance->date)->format('Y-m-d'),
+                    $employee?->employee_id,
+                    $employee?->name,
+                    $employee?->department,
+                    $employee?->position,
+                    $attendance->check_in_time,
+                    $attendance->check_out_time,
+                    $attendance->status,
+                    $attendance->late_minutes,
+                    $attendance->notes,
+                ]);
+            }
+
+            fclose($handle);
+        };
+
+        return response()->stream($callback, 200, $headers);
+    }
+
+    public function bulkDelete(Request $request)
+    {
+        $ids = $this->parseIds($request->input('ids', []));
+
+        if (empty($ids)) {
+            if ($request->wantsJson()) {
+                return response()->json([
+                    'message' => 'Pilih minimal satu data absensi.',
+                ], 422);
+            }
+
+            return back()->with('error', 'Pilih minimal satu data absensi.');
+        }
+
+        $deleted = Attendance::whereIn('id', $ids)->delete();
+
+        if ($request->wantsJson()) {
+            return response()->json([
+                'success' => true,
+                'deleted' => $deleted,
+            ]);
+        }
+
+        return back()->with('success', "Berhasil menghapus {$deleted} data absensi.");
+    }
+}
 

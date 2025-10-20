@@ -116,16 +116,16 @@
                 </select>
             </div>
 
-            <!-- Department Filter -->
+            <!-- Position Filter -->
             <div>
-                <label for="jabatan" class="block text-sm font-medium text-gray-700 mb-1">
-                    Jabatan
+                <label for="position" class="block text-sm font-medium text-gray-700 mb-1">
+                    Posisi
                 </label>
-                <select name="jabatan" id="jabatan" 
+                <select name="position" id="position" 
                         class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                    <option value="">Semua Jabatan</option>
-                    @foreach($departments ?? [] as $dept)
-                    <option value="{{ $dept }}" {{ request('jabatan') == $dept ? 'selected' : '' }}>{{ $dept }}</option>
+                    <option value="">Semua Posisi</option>
+                    @foreach(($positions ?? $departments ?? []) as $pos)
+                    <option value="{{ $pos }}" {{ request('position') == $pos ? 'selected' : '' }}>{{ $pos }}</option>
                     @endforeach
                 </select>
             </div>
@@ -169,7 +169,7 @@
                         </button>
                         <div x-show="open" @click.away="open = false" x-transition
                              class="absolute right-0 mt-2 w-48 bg-white rounded-md shadow-lg py-1 z-10">
-                            <a href="{{ route('admin.employees.export') }}" 
+                            <a href="{{ route('admin.export.index') }}" 
                                class="block px-4 py-2 text-sm text-gray-700 hover:bg-gray-50">
                                 <i class="fas fa-download mr-2"></i> Export Excel
                             </a>
@@ -198,7 +198,7 @@
                             NIP
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Jabatan
+                            Posisi
                         </th>
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Status
@@ -216,15 +216,15 @@
                     <tr class="hover:bg-gray-50">
                         <td class="px-6 py-4 whitespace-nowrap">
                             <input type="checkbox" class="employee-checkbox rounded border-gray-300 text-blue-600 focus:ring-blue-500" 
-                                   value="{{ is_object($employee) ? $employee->id : '' }}">
+                                   value="{{ $employee->id }}">
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-10 w-10">
-                                    @if(is_object($employee) && !empty($employee->foto))
+                                    @if(!empty($employee->foto))
                                     <img class="h-10 w-10 rounded-full object-cover" 
                                          src="{{ asset('storage/'.$employee->foto) }}" 
-                                         alt="{{ $employee->nama }}">
+                                         alt="{{ $employee->name }}">
                                     @else
                                     <div class="h-10 w-10 rounded-full bg-gray-300 flex items-center justify-center">
                                         <i class="fas fa-user text-gray-600"></i>
@@ -232,25 +232,26 @@
                                     @endif
                                 </div>
                                 <div class="ml-4">
-                                    <div class="text-sm font-medium text-gray-900">{{ $employee->nama }}</div>
-                                    <div class="text-sm text-gray-500">{{ $employee->email }}</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ $employee->name }}</div>
+                                    <div class="text-sm text-gray-500">RFID: {{ $employee->rfid_uid ?? '-' }}</div>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ $employee->nip }}</div>
+                            <div class="text-sm text-gray-900">{{ $employee->employee_id }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
-                            <div class="text-sm text-gray-900">{{ $employee->jabatan }}</div>
+                            <div class="text-sm text-gray-900">{{ $employee->position ?? '-' }}</div>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap">
+                            @php $active = (bool) ($employee->is_active ?? false); @endphp
                             <span class="inline-flex px-2 py-1 text-xs font-semibold rounded-full 
-                                {{ $employee->status == 'aktif' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
-                                {{ ucfirst($employee->status) }}
+                                {{ $active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800' }}">
+                                {{ $active ? 'Aktif' : 'Non-Aktif' }}
                             </span>
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                            {{ $employee->tanggal_bergabung ? $employee->tanggal_bergabung->format('d/m/Y') : '-' }}
+                            {{ optional($employee->created_at)->format('d/m/Y') ?? '-' }}
                         </td>
                         <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
                             <div class="flex items-center justify-end space-x-2">
@@ -413,13 +414,19 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     // Auto-submit form on filter change
-    document.getElementById('status').addEventListener('change', function() {
-        this.form.submit();
-    });
+    const statusSelect = document.getElementById('status');
+    if (statusSelect) {
+        statusSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
     
-    document.getElementById('jabatan').addEventListener('change', function() {
-        this.form.submit();
-    });
+    const positionSelect = document.getElementById('position');
+    if (positionSelect) {
+        positionSelect.addEventListener('change', function() {
+            this.form.submit();
+        });
+    }
 });
 </script>
 

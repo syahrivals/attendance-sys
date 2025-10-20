@@ -29,7 +29,7 @@
             </div>
             <div class="text-right">
                 <div class="text-sm text-gray-500">Total Record</div>
-                <div class="text-2xl font-bold text-blue-600">{{ $totalRecords ?? 0 }}</div>
+                <div class="text-2xl font-bold text-blue-600">{{ number_format($totalRecords ?? 0) }}</div>
             </div>
         </div>
     </div>
@@ -76,9 +76,7 @@
                         <select name="employee_id" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500">
                             <option value="">Semua Karyawan</option>
                             @foreach($employees ?? [] as $emp)
-                            @if(is_object($emp))
-                                <option value="{{ $emp->id ?? 0 }}">{{ $emp->nama ?? 'No Name'}} ({{ $emp->nip ?? 'No Nip'}})</option>
-                            @endif
+                                <option value="{{ $emp->id }}">{{ $emp->name }} ({{ $emp->employee_id }})</option>
                             @endforeach
                         </select>
                     </div>
@@ -86,11 +84,10 @@
                         <label class="block text-sm font-medium text-gray-700 mb-1">Status</label>
                         <select name="status" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-green-500 focus:border-green-500">
                             <option value="">Semua Status</option>
-                            <option value="hadir">Hadir</option>
-                            <option value="terlambat">Terlambat</option>
-                            <option value="alpha">Alpha</option>
-                            <option value="izin">Izin</option>
-                            <option value="sakit">Sakit</option>
+                            <option value="Hadir">Hadir</option>
+                            <option value="Checkout">Checkout</option>
+                            <option value="Tidak Hadir">Tidak Hadir</option>
+                            <option value="Terlambat">Terlambat</option>
                         </select>
                     </div>
                 </div>
@@ -106,10 +103,6 @@
                         <label class="flex items-center">
                             <input type="radio" name="format" value="csv" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300">
                             <span class="ml-2 text-sm text-gray-700">CSV (.csv)</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="radio" name="format" value="pdf" class="focus:ring-green-500 h-4 w-4 text-green-600 border-gray-300">
-                            <span class="ml-2 text-sm text-gray-700">PDF (.pdf)</span>
                         </label>
                     </div>
                 </div>
@@ -173,11 +166,11 @@
                         </select>
                     </div>
                     <div>
-                        <label class="block text-sm font-medium text-gray-700 mb-1">Jabatan</label>
-                        <select name="jabatan" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
-                            <option value="">Semua Jabatan</option>
-                            @foreach($departments ?? [] as $dept)
-                            <option value="{{ $dept }}">{{ $dept }}</option>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">Posisi</label>
+                        <select name="position" class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
+                            <option value="">Semua Posisi</option>
+                            @foreach($positions ?? [] as $position)
+                            <option value="{{ $position }}">{{ $position }}</option>
                             @endforeach
                         </select>
                     </div>
@@ -203,20 +196,12 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">Data yang Disertakan</label>
                     <div class="space-y-2">
                         <label class="flex items-center">
-                            <input type="checkbox" name="include[]" value="basic_info" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Informasi Dasar (NIP, Nama, Email)</span>
-                        </label>
-                        <label class="flex items-center">
                             <input type="checkbox" name="include[]" value="job_info" checked class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Informasi Pekerjaan (Jabatan, Status)</span>
-                        </label>
-                        <label class="flex items-center">
-                            <input type="checkbox" name="include[]" value="contact_info" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Informasi Kontak (Phone, Alamat)</span>
+                            <span class="ml-2 text-sm text-gray-700">Informasi Pekerjaan (Departemen, Posisi)</span>
                         </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="include[]" value="join_date" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
-                            <span class="ml-2 text-sm text-gray-700">Tanggal Bergabung</span>
+                            <span class="ml-2 text-sm text-gray-700">Tanggal Dibuat</span>
                         </label>
                         <label class="flex items-center">
                             <input type="checkbox" name="include[]" value="attendance_summary" class="rounded border-gray-300 text-blue-600 focus:ring-blue-500">
@@ -305,32 +290,32 @@
             </div>
         </div>
         <div class="p-6">
-            @if(isset($exportHistory) && count($exportHistory) > 0)
+            @if(($exportHistory ?? collect())->isNotEmpty())
             <div class="space-y-4">
                 @foreach($exportHistory as $export)
                 <div class="flex items-center justify-between py-3 border-b border-gray-200 last:border-b-0">
                     <div class="flex items-center space-x-3">
                         <div class="w-8 h-8 bg-gray-100 rounded-lg flex items-center justify-center">
-                            @if($export['type'] == 'attendance')
+                            @if($export->type === 'attendance')
                             <i class="fas fa-calendar-check text-gray-600 text-sm"></i>
                             @else
                             <i class="fas fa-users text-gray-600 text-sm"></i>
                             @endif
                         </div>
                         <div>
-                            <p class="text-sm font-medium text-gray-900">{{ $export['name'] }}</p>
+                            <p class="text-sm font-medium text-gray-900">{{ $export->name }}</p>
                             <p class="text-xs text-gray-500">
-                                {{ $export['created_at'] }} • {{ $export['size'] }} • {{ strtoupper($export['format']) }}
+                                {{ optional($export->created_at)->format('d M Y H:i') }} &middot; {{ $export->human_size }} &middot; {{ strtoupper($export->format) }}
                             </p>
                         </div>
                     </div>
                     <div class="flex items-center space-x-2">
-                        <a href="{{ $export['download_url'] }}" 
+                        <a href="{{ route('admin.export.download', $export) }}" 
                            class="text-blue-600 hover:text-blue-800 text-sm">
                             <i class="fas fa-download mr-1"></i>
                             Download
                         </a>
-                        <button onclick="deleteExport('{{ $export['id'] }}')" 
+                        <button onclick="deleteExport('{{ $export->getKey() }}')" 
                                 class="text-red-600 hover:text-red-800 text-sm">
                             <i class="fas fa-trash mr-1"></i>
                             Hapus
@@ -437,13 +422,17 @@ document.addEventListener('DOMContentLoaded', function() {
         form.addEventListener('submit', function(e) {
             const submitBtn = this.querySelector('button[type="submit"]');
             if (submitBtn) {
+                if (!submitBtn.dataset.originalHtml) {
+                    submitBtn.dataset.originalHtml = submitBtn.innerHTML;
+                }
+
                 submitBtn.disabled = true;
                 submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin mr-2"></i>Memproses...';
                 
                 // Re-enable after 5 seconds (adjust based on your needs)
                 setTimeout(() => {
                     submitBtn.disabled = false;
-                    submitBtn.innerHTML = submitBtn.innerHTML.replace('Memproses...', 'Export');
+                    submitBtn.innerHTML = submitBtn.dataset.originalHtml;
                 }, 5000);
             }
         });

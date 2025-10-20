@@ -134,8 +134,8 @@
                         class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                     <option value="">Semua Karyawan</option>
                     @foreach($employees ?? [] as $emp)
-                    <option value="{{ isset($emp) && is_object($emp) ? $emp->id : '' }}" {{ isset($emp) && is_object($emp) && request('employee_id') == $emp->id ? 'selected' : '' }}>
-                        {{ $emp->nama ?? 'No Name' }} ({{ $emp->nip ?? 'No Nip'}})
+                    <option value="{{ $emp->id }}" {{ request('employee_id') == $emp->id ? 'selected' : '' }}>
+                        {{ $emp->name ?? 'Tanpa Nama' }} ({{ $emp->employee_id ?? 'Tanpa NIP'}})
                     </option>
                     @endforeach
                 </select>
@@ -239,9 +239,6 @@
                         <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">
                             Keterlambatan
                         </th>
-                        <th class="px-6 py-3 text-right text-xs font-medium text-gray-500 uppercase tracking-wider">
-                            Aksi
-                        </th>
                     </tr>
                 </thead>
                 <tbody class="bg-white divide-y divide-gray-200">
@@ -258,10 +255,10 @@
                         <td class="px-6 py-4 whitespace-nowrap">
                             <div class="flex items-center">
                                 <div class="flex-shrink-0 h-8 w-8">
-                                    @if($attendance->employee->foto)
+                                    @if(optional($attendance->employee)->foto)
                                     <img class="h-8 w-8 rounded-full object-cover" 
                                          src="{{ asset('storage/'.$attendance->employee->foto) }}" 
-                                         alt="{{ $attendance->employee->nama }}">
+                                         alt="{{ optional($attendance->employee)->name }}">
                                     @else
                                     <div class="h-8 w-8 rounded-full bg-gray-300 flex items-center justify-center">
                                         <i class="fas fa-user text-gray-600 text-xs"></i>
@@ -269,8 +266,8 @@
                                     @endif
                                 </div>
                                 <div class="ml-3">
-                                    <div class="text-sm font-medium text-gray-900">{{ $attendance->employee->nama }}</div>
-                                    <div class="text-xs text-gray-500">{{ $attendance->employee->nip }}</div>
+                                    <div class="text-sm font-medium text-gray-900">{{ optional($attendance->employee)->name ?? 'Tidak diketahui' }}</div>
+                                    <div class="text-xs text-gray-500">{{ optional($attendance->employee)->employee_id }}</div>
                                 </div>
                             </div>
                         </td>
@@ -305,22 +302,6 @@
                             @else
                             <span class="text-gray-400">-</span>
                             @endif
-                        </td>
-                        <td class="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                            <div class="flex items-center justify-end space-x-2">
-                                <button onclick="viewAttendance({{ $attendance->id }})" 
-                                        class="text-blue-600 hover:text-blue-900" title="Lihat Detail">
-                                    <i class="fas fa-eye"></i>
-                                </button>
-                                <button onclick="editAttendance({{ $attendance->id }})" 
-                                        class="text-indigo-600 hover:text-indigo-900" title="Edit">
-                                    <i class="fas fa-edit"></i>
-                                </button>
-                                <button onclick="deleteAttendance({{ $attendance->id }})" 
-                                        class="text-red-600 hover:text-red-900" title="Hapus">
-                                    <i class="fas fa-trash"></i>
-                                </button>
-                            </div>
                         </td>
                     </tr>
                     @empty
@@ -387,9 +368,9 @@
                         <select name="employee_id" id="modalEmployeeId" required
                                 class="block w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-blue-500 focus:border-blue-500">
                             <option value="">Pilih Karyawan</option>
-                            @foreach($employees ?? [] as $emp)
-                            <option value="{{ is_object($emp) ? $emp->id : 0 }}">{{ is_object($emp) ? $emp->nama : 'No Name' }} ({{ is_object($emp) ? $emp->nip : 'No Nip' }})</option>
-                            @endforeach
+                    @foreach($employees ?? [] as $emp)
+                    <option value="{{ $emp->id }}">{{ $emp->name ?? 'Tanpa Nama' }} ({{ $emp->employee_id ?? 'Tanpa NIP' }})</option>
+                    @endforeach
                         </select>
                     </div>
                     

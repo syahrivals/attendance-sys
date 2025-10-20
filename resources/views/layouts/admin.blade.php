@@ -22,7 +22,7 @@
     <div class="min-h-full">
         <!-- Sidebar -->
         <div class="fixed inset-y-0 left-0 z-50 w-64 bg-white shadow-lg sidebar-transition"
-             :class="{ '-translate-x-full': !sidebarOpen, 'translate-x-0': sidebarOpen }"
+             :class="{ '-translate-x-full lg:translate-x-0': !sidebarOpen, 'translate-x-0': sidebarOpen }"
              @click.away="sidebarOpen = false">
             
             <!-- Logo -->

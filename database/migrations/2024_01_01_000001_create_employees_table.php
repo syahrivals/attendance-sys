@@ -16,6 +16,7 @@ return new class extends Migration
             $table->string('name');
             $table->string('employee_id')->unique();
             $table->string('rfid_uid')->unique();
+            $table->string('face_uid')->unique()->nullable();
             $table->string('department')->nullable();
             $table->string('position')->nullable();
             $table->boolean('is_active')->default(true);

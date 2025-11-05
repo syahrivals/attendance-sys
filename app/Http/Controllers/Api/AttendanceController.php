@@ -20,32 +20,47 @@ class AttendanceController extends Controller
     public function tap(Request $request)
     {
         try {
-            // Validasi input
+            // Validasi input fleksibel: terima rfid_uid ATAU face_uid
             $request->validate([
-                'rfid_uid' => 'required|string',
-                'device_id' => 'required|string' // ID perangkat ESP32
+                'device_id' => 'required|string',
+                'rfid_uid' => 'nullable|string',
+                'face_uid' => 'nullable|string',
             ]);
 
-            $rfidUid = $request->rfid_uid;
+            if (!$request->filled('rfid_uid') && !$request->filled('face_uid')) {
+                return response()->json([
+                    'success' => false,
+                    'message' => 'Input tidak valid: butuh salah satu dari rfid_uid atau face_uid',
+                    'buzzer' => 'error'
+                ], 422);
+            }
+
+            $rfidUid = $request->input('rfid_uid');
+            $faceUid = $request->input('face_uid');
             $deviceId = $request->device_id;
             $currentTime = Carbon::now('Asia/Jakarta');
             $today = today();
 
-            Log::info("RFID Tap received", [
+            Log::info("Attendance tap received", [
                 'rfid_uid' => $rfidUid,
+                'face_uid' => $faceUid,
                 'device_id' => $deviceId,
                 'time' => $currentTime
             ]);
 
-            // Cari karyawan berdasarkan RFID UID
-            $employee = Employee::where('rfid_uid', $rfidUid)
-                               ->where('is_active', true)
-                               ->first();
+            // Resolve karyawan berdasarkan prioritas: rfid_uid -> face_uid
+            $employeeQuery = Employee::query()->where('is_active', true);
+            if ($rfidUid) {
+                $employeeQuery->where('rfid_uid', $rfidUid);
+            } elseif ($faceUid) {
+                $employeeQuery->where('face_uid', $faceUid);
+            }
+            $employee = $employeeQuery->first();
 
             if (!$employee) {
                 return response()->json([
                     'success' => false,
-                    'message' => 'Kartu tidak terdaftar',
+                    'message' => 'Karyawan tidak ditemukan / tidak aktif',
                     'buzzer' => 'error' // Signal untuk buzzer error
                 ], 404);
             }

@@ -13,6 +13,7 @@ class Employee extends Model
         'name',
         'employee_id',
         'rfid_uid',
+        'face_uid',
         'department',
         'position',
         'is_active'
